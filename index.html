@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Time Card</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Spectral:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+  :root{
+    --paper: #EDEAE1;
+    --paper-raised: #F5F3ED;
+    --ink: #1C2430;
+    --ink-soft: #5B6472;
+    --rule: #C9C2B2;
+    --brass: #9C7A3C;
+    --brass-dim: #B8996A;
+    --err: #A13D2A;
+  }
+
+  *{ box-sizing: border-box; }
+
+  body{
+    margin:0;
+    min-height:100vh;
+    background: var(--paper);
+    background-image:
+      linear-gradient(var(--rule) 1px, transparent 1px);
+    background-size: 100% 42px;
+    background-position: 0 130px;
+    font-family: 'IBM Plex Mono', monospace;
+    color: var(--ink);
+    display:flex;
+    justify-content:center;
+    padding: 48px 20px 80px;
+  }
+
+  .card{
+    width:100%;
+    max-width: 480px;
+  }
+
+  .datehead{
+    margin-bottom: 28px;
+  }
+  .datehead .weekday{
+    font-family:'Spectral', serif;
+    font-size: 36px;
+    font-weight:600;
+    line-height:1.05;
+    color: var(--ink);
+    margin:0;
+  }
+  .datehead .rest{
+    font-family:'Spectral', serif;
+    font-size: 18px;
+    color: var(--ink-soft);
+    margin: 2px 0 14px;
+  }
+  .datepick{
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 13px;
+    color: var(--brass);
+    background: none;
+    border: none;
+    border-bottom: 1px solid var(--brass-dim);
+    padding: 2px 0;
+    cursor: pointer;
+  }
+
+  .panel{
+    background: var(--paper-raised);
+    border: 1px solid var(--rule);
+    padding: 28px 26px;
+    position: relative;
+  }
+  .panel::before{
+    content:"";
+    position:absolute;
+    left:0; top:0; bottom:0;
+    width:3px;
+    background: var(--brass);
+  }
+
+  .row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap: 14px;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--rule);
+  }
+  .row:last-of-type{ border-bottom:none; }
+
+  .label{
+    font-size: 13px;
+    letter-spacing: 0.02em;
+    color: var(--ink-soft);
+    flex-shrink:0;
+  }
+
+  input[type="time"], input[type="number"]{
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 16px;
+    color: var(--ink);
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid var(--rule);
+    padding: 4px 2px;
+    width: 130px;
+    text-align: right;
+  }
+  input[type="number"]{ width: 80px; }
+  input:focus{
+    outline:none;
+    border-bottom: 1px solid var(--brass);
+  }
+
+  .toggle{
+    display:flex;
+    gap: 8px;
+  }
+  .toggle button{
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 13px;
+    background: transparent;
+    border: 1px solid var(--rule);
+    color: var(--ink-soft);
+    padding: 6px 14px;
+    cursor: pointer;
+  }
+  .toggle button.active{
+    border-color: var(--brass);
+    color: var(--brass);
+    background: rgba(156,122,60,0.08);
+  }
+  .toggle button:focus-visible, .datepick:focus-visible, .savebtn:focus-visible, .exportbtn:focus-visible{
+    outline: 2px solid var(--brass);
+    outline-offset: 2px;
+  }
+
+  .break-minutes-row{
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.25s ease;
+  }
+  .break-minutes-row.open{ max-height: 60px; }
+
+  .totalline{
+    display:flex;
+    justify-content:space-between;
+    padding-top: 18px;
+    margin-top: 4px;
+    font-size: 13px;
+    color: var(--ink-soft);
+  }
+  .totalline .val{
+    color: var(--ink);
+    font-weight:600;
+  }
+
+  .savebtn{
+    width:100%;
+    margin-top: 22px;
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 14px;
+    letter-spacing: 0.02em;
+    background: var(--ink);
+    color: var(--paper-raised);
+    border: none;
+    padding: 13px 0;
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+  .savebtn:hover{ background: #30394A; }
+  .savebtn:disabled{ background: var(--ink-soft); cursor: default; }
+
+  .status{
+    font-size: 12px;
+    color: var(--brass);
+    margin-top: 10px;
+    min-height: 16px;
+  }
+  .status.error{ color: var(--err); }
+
+  .month-section{
+    margin-top: 40px;
+  }
+  .month-section h2{
+    font-family:'Spectral', serif;
+    font-size: 17px;
+    font-weight:500;
+    margin: 0 0 12px;
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+  }
+  .month-section h2 .count{
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 12px;
+    color: var(--ink-soft);
+    font-weight:400;
+  }
+
+  .entries{
+    display:flex;
+    flex-direction:column;
+  }
+  .entry{
+    display:flex;
+    justify-content:space-between;
+    font-size: 13px;
+    padding: 9px 0;
+    border-bottom: 1px dashed var(--rule);
+    color: var(--ink-soft);
+  }
+  .entry .d{ color: var(--ink); }
+  .entry .h{ color: var(--brass); }
+  .empty{
+    font-size: 13px;
+    color: var(--ink-soft);
+    font-style: italic;
+    padding: 10px 0;
+  }
+
+  .exportbtn{
+    width:100%;
+    margin-top: 16px;
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 13px;
+    background: transparent;
+    color: var(--brass);
+    border: 1px solid var(--brass-dim);
+    padding: 11px 0;
+    cursor: pointer;
+  }
+  .exportbtn:hover{ background: rgba(156,122,60,0.08); }
+  .exportbtn + .exportbtn{ margin-top: 10px; }
+
+  .backup-note{
+    font-size: 12px;
+    color: var(--ink-soft);
+    line-height: 1.5;
+    margin: 0 0 14px;
+  }
+</style>
+</head>
+<body>
+
+<div class="card">
+  <div class="datehead">
+    <p class="weekday" id="weekday">—</p>
+    <p class="rest" id="restdate">—</p>
+    <input type="date" id="datepick" class="datepick">
+  </div>
+
+  <div class="panel">
+    <div class="row">
+      <span class="label">Start</span>
+      <input type="time" id="startTime">
+    </div>
+    <div class="row">
+      <span class="label">End</span>
+      <input type="time" id="endTime">
+    </div>
+    <div class="row">
+      <span class="label">Took a break?</span>
+      <div class="toggle">
+        <button type="button" id="breakYes">Yes</button>
+        <button type="button" id="breakNo" class="active">No</button>
+      </div>
+    </div>
+    <div class="row break-minutes-row" id="breakMinutesRow">
+      <span class="label">Break, minutes</span>
+      <input type="number" id="breakMinutes" min="0" step="1" value="0">
+    </div>
+
+    <div class="totalline">
+      <span>Total worked</span>
+      <span class="val" id="totalVal">—</span>
+    </div>
+
+    <button class="savebtn" id="saveBtn">Save entry</button>
+    <div class="status" id="status"></div>
+  </div>
+
+  <div class="month-section">
+    <h2><span id="monthLabel">This month</span> <span class="count" id="monthCount"></span></h2>
+    <div class="entries" id="entries"></div>
+    <button class="exportbtn" id="exportBtn">Export this month as CSV</button>
+    <div class="status" id="exportStatus"></div>
+  </div>
+
+  <div class="month-section backup-section">
+    <h2>Backup</h2>
+    <p class="backup-note">Entries live in this browser only. Back them up before switching devices or clearing browser data.</p>
+    <button class="exportbtn" id="backupExportBtn">Download full backup</button>
+    <button class="exportbtn" id="backupImportBtn">Restore from backup</button>
+    <input type="file" id="backupFileInput" accept="application/json" style="display:none">
+    <div class="status" id="backupStatus"></div>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const pad = n => String(n).padStart(2,'0');
+
+// Storage shim: same shape as the get/set/list API this was built against,
+// but backed by the browser's own localStorage so it works with no server.
+const LS_PREFIX = 'timecard::';
+const storage = {
+  async get(key){
+    const raw = localStorage.getItem(LS_PREFIX + key);
+    return raw === null ? null : { key, value: raw };
+  },
+  async set(key, value){
+    localStorage.setItem(LS_PREFIX + key, value);
+    return { key, value };
+  },
+  async list(prefix){
+    const keys = [];
+    for(let i=0; i<localStorage.length; i++){
+      const k = localStorage.key(i);
+      if(k && k.startsWith(LS_PREFIX)){
+        const bare = k.slice(LS_PREFIX.length);
+        if(!prefix || bare.startsWith(prefix)) keys.push(bare);
+      }
+    }
+    return { keys };
+  }
+};
+
+function toDateStr(d){
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+}
+
+let breakTaken = false;
+let currentDate = new Date();
+
+function fmtHeadline(dateStr){
+  const [y,m,d] = dateStr.split('-').map(Number);
+  const dt = new Date(y, m-1, d);
+  const weekday = dt.toLocaleDateString('en-US', { weekday: 'long' });
+  const rest = dt.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+  $('weekday').textContent = weekday;
+  $('restdate').textContent = rest;
+}
+
+function minutesFromTimes(start, end){
+  if(!start || !end) return null;
+  const [sh, sm] = start.split(':').map(Number);
+  const [eh, em] = end.split(':').map(Number);
+  let mins = (eh*60+em) - (sh*60+sm);
+  if(mins < 0) mins += 24*60; // handle overnight shift
+  return mins;
+}
+
+function fmtHours(mins){
+  if(mins === null || isNaN(mins)) return '—';
+  const h = Math.floor(mins/60);
+  const m = mins % 60;
+  return `${h}h ${pad(m)}m`;
+}
+
+function updateTotal(){
+  const start = $('startTime').value;
+  const end = $('endTime').value;
+  const brk = breakTaken ? (parseInt($('breakMinutes').value,10) || 0) : 0;
+  const worked = minutesFromTimes(start, end);
+  if(worked === null){
+    $('totalVal').textContent = '—';
+    return;
+  }
+  const net = Math.max(0, worked - brk);
+  $('totalVal').textContent = fmtHours(net);
+}
+
+function setBreak(taken){
+  breakTaken = taken;
+  $('breakYes').classList.toggle('active', taken);
+  $('breakNo').classList.toggle('active', !taken);
+  $('breakMinutesRow').classList.toggle('open', taken);
+  if(!taken) $('breakMinutes').value = 0;
+  updateTotal();
+}
+
+$('breakYes').addEventListener('click', () => setBreak(true));
+$('breakNo').addEventListener('click', () => setBreak(false));
+$('startTime').addEventListener('change', updateTotal);
+$('endTime').addEventListener('change', updateTotal);
+$('breakMinutes').addEventListener('input', updateTotal);
+
+function entryKey(dateStr){ return `entry:${dateStr}`; }
+
+async function loadEntryForDate(dateStr){
+  fmtHeadline(dateStr);
+  $('status').textContent = '';
+  try{
+    const res = await storage.get(entryKey(dateStr));
+    const entry = res ? JSON.parse(res.value) : null;
+    if(entry){
+      $('startTime').value = entry.start || '';
+      $('endTime').value = entry.end || '';
+      setBreak(!!entry.breakTaken);
+      $('breakMinutes').value = entry.breakMinutes || 0;
+      $('status').textContent = 'Loaded saved entry for this date.';
+    } else {
+      $('startTime').value = '';
+      $('endTime').value = '';
+      setBreak(false);
+      $('breakMinutes').value = 0;
+    }
+  }catch(e){
+    $('startTime').value = '';
+    $('endTime').value = '';
+    setBreak(false);
+    $('breakMinutes').value = 0;
+  }
+  updateTotal();
+}
+
+$('saveBtn').addEventListener('click', async () => {
+  const dateStr = $('datepick').value;
+  const start = $('startTime').value;
+  const end = $('endTime').value;
+  const statusEl = $('status');
+
+  if(!start || !end){
+    statusEl.textContent = 'Add both a start and end time before saving.';
+    statusEl.classList.add('error');
+    return;
+  }
+
+  const brk = breakTaken ? (parseInt($('breakMinutes').value,10) || 0) : 0;
+  const worked = minutesFromTimes(start, end);
+  const net = Math.max(0, worked - brk);
+
+  const entry = {
+    date: dateStr,
+    start, end,
+    breakTaken,
+    breakMinutes: brk,
+    totalMinutes: net
+  };
+
+  statusEl.classList.remove('error');
+  $('saveBtn').disabled = true;
+  try{
+    const result = await storage.set(entryKey(dateStr), JSON.stringify(entry));
+    if(result){
+      statusEl.textContent = 'Saved.';
+      await renderMonth(dateStr.slice(0,7));
+    } else {
+      statusEl.textContent = 'Could not save — try again.';
+      statusEl.classList.add('error');
+    }
+  }catch(e){
+    statusEl.textContent = 'Could not save — try again.';
+    statusEl.classList.add('error');
+  }
+  $('saveBtn').disabled = false;
+});
+
+async function renderMonth(monthStr){
+  const [y,m] = monthStr.split('-').map(Number);
+  const monthName = new Date(y, m-1, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  $('monthLabel').textContent = monthName;
+
+  const entriesEl = $('entries');
+  entriesEl.innerHTML = '';
+
+  let keysRes;
+  try{
+    keysRes = await storage.list('entry:');
+  }catch(e){
+    keysRes = null;
+  }
+
+  const monthEntries = [];
+  if(keysRes && keysRes.keys){
+    for(const k of keysRes.keys){
+      if(k.startsWith(`entry:${monthStr}`)){
+        try{
+          const r = await storage.get(k);
+          if(r) monthEntries.push(JSON.parse(r.value));
+        }catch(e){ /* skip */ }
+      }
+    }
+  }
+  monthEntries.sort((a,b) => a.date.localeCompare(b.date));
+
+  $('monthCount').textContent = monthEntries.length ? `${monthEntries.length} ${monthEntries.length===1?'entry':'entries'}` : '';
+
+  if(monthEntries.length === 0){
+    entriesEl.innerHTML = '<div class="empty">No entries saved for this month yet.</div>';
+  } else {
+    for(const e of monthEntries){
+      const d = new Date(e.date + 'T00:00:00');
+      const label = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      const row = document.createElement('div');
+      row.className = 'entry';
+      row.innerHTML = `<span class="d">${label} · ${e.start}–${e.end}</span><span class="h">${fmtHours(e.totalMinutes)}</span>`;
+      entriesEl.appendChild(row);
+    }
+  }
+
+  window._monthEntriesCache = monthEntries;
+  window._monthCache = monthStr;
+}
+
+function toCSV(entries){
+  const header = ['Date','Start','End','Break taken','Break minutes','Total hours (h:mm)','Total minutes'];
+  const lines = [header.join(',')];
+  for(const e of entries){
+    const h = Math.floor(e.totalMinutes/60);
+    const m = e.totalMinutes % 60;
+    lines.push([
+      e.date, e.start, e.end,
+      e.breakTaken ? 'Yes' : 'No',
+      e.breakMinutes,
+      `${h}:${pad(m)}`,
+      e.totalMinutes
+    ].join(','));
+  }
+  return lines.join('\n');
+}
+
+$('exportBtn').addEventListener('click', () => {
+  const statusEl = $('exportStatus');
+  const entries = window._monthEntriesCache || [];
+  if(entries.length === 0){
+    statusEl.textContent = 'No entries to export for this month.';
+    return;
+  }
+  const csv = toCSV(entries);
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `timecard-${window._monthCache}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  statusEl.textContent = 'CSV downloaded.';
+});
+
+// Backup: export/import all entries as one JSON file, for moving between browsers/devices
+$('backupExportBtn').addEventListener('click', async () => {
+  const statusEl = $('backupStatus');
+  const keysRes = await storage.list('entry:');
+  const all = [];
+  for(const k of (keysRes.keys || [])){
+    const r = await storage.get(k);
+    if(r) all.push(JSON.parse(r.value));
+  }
+  if(all.length === 0){
+    statusEl.textContent = 'No entries saved yet.';
+    return;
+  }
+  all.sort((a,b) => a.date.localeCompare(b.date));
+  const blob = new Blob([JSON.stringify(all, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `timecard-backup-${toDateStr(new Date())}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  statusEl.textContent = `Backed up ${all.length} ${all.length===1?'entry':'entries'}.`;
+});
+
+$('backupImportBtn').addEventListener('click', () => $('backupFileInput').click());
+
+$('backupFileInput').addEventListener('change', async (e) => {
+  const statusEl = $('backupStatus');
+  const file = e.target.files[0];
+  if(!file) return;
+  try{
+    const text = await file.text();
+    const entries = JSON.parse(text);
+    if(!Array.isArray(entries)) throw new Error('bad format');
+    for(const entry of entries){
+      if(entry && entry.date){
+        await storage.set(entryKey(entry.date), JSON.stringify(entry));
+      }
+    }
+    statusEl.textContent = `Restored ${entries.length} ${entries.length===1?'entry':'entries'}.`;
+    await renderMonth($('datepick').value.slice(0,7));
+    await loadEntryForDate($('datepick').value);
+  }catch(err){
+    statusEl.textContent = 'That file could not be read as a backup.';
+    statusEl.classList.add('error');
+  }
+  e.target.value = '';
+});
+
+// init
+(async function init(){
+  const todayStr = toDateStr(currentDate);
+  $('datepick').value = todayStr;
+  $('datepick').addEventListener('change', async () => {
+    const val = $('datepick').value;
+    if(!val) return;
+    await loadEntryForDate(val);
+    await renderMonth(val.slice(0,7));
+  });
+  await loadEntryForDate(todayStr);
+  await renderMonth(todayStr.slice(0,7));
+})();
+</script>
+</body>
+</html>
