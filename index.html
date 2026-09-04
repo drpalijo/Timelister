@@ -45,17 +45,20 @@
   }
   .datehead .weekday{
     font-family:'Spectral', serif;
-    font-size: 36px;
+    font-size: 100px;
     font-weight:600;
-    line-height:1.05;
+    line-height:1.0;
     color: var(--ink);
     margin:0;
+    text-align: center;
+    text-transform: uppercase;
   }
   .datehead .rest{
     font-family:'Spectral', serif;
-    font-size: 18px;
+    font-size: 20px;
     color: var(--ink-soft);
     margin: 2px 0 14px;
+    text-align: center;
   }
   .datepick{
     font-family:'IBM Plex Mono', monospace;
@@ -341,7 +344,8 @@ function fmtHeadline(dateStr){
   const [y,m,d] = dateStr.split('-').map(Number);
   const dt = new Date(y, m-1, d);
   const weekday = dt.toLocaleDateString('en-US', { weekday: 'long' });
-  const rest = dt.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+  const month = dt.toLocaleDateString('en-US', {month: 'long'});
+  const rest = `${d}. ${month} ${y}`;
   $('weekday').textContent = weekday;
   $('restdate').textContent = rest;
 }
@@ -496,7 +500,8 @@ async function renderMonth(monthStr){
   } else {
     for(const e of monthEntries){
       const d = new Date(e.date + 'T00:00:00');
-      const label = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      const monthShort = d.toLocaleDateString('en-US', {month: 'short'});
+      const label = `${d.getDate()}. ${monthShort}`;
       const row = document.createElement('div');
       row.className = 'entry';
       row.innerHTML = `<span class="d">${label} · ${e.start}–${e.end}</span><span class="h">${fmtHours(e.totalMinutes)}</span>`;
@@ -508,6 +513,11 @@ async function renderMonth(monthStr){
   window._monthCache = monthStr;
 }
 
+function toEUDate(dateStr) {
+  const [y,m,d] = dateStr.split('-');
+  return `${d}.${m}.${y}`;
+}
+
 function toCSV(entries){
   const header = ['Date','Start','End','Break taken','Break minutes','Total hours (h:mm)','Total minutes'];
   const lines = [header.join(',')];
@@ -515,7 +525,7 @@ function toCSV(entries){
     const h = Math.floor(e.totalMinutes/60);
     const m = e.totalMinutes % 60;
     lines.push([
-      e.date, e.start, e.end,
+      toEUDate(e.date), e.start, e.end,
       e.breakTaken ? 'Yes' : 'No',
       e.breakMinutes,
       `${h}:${pad(m)}`,
