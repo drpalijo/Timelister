@@ -52,6 +52,11 @@
     margin:0;
     text-align: center;
     text-transform: uppercase;
+    cursor: pointer;
+    transition: color 0.15s ease;
+  }
+  .datahead .weekday:hover{
+    color: var(--brass);
   }
   .datehead .rest{
     font-family:'Spectral', serif;
@@ -59,6 +64,18 @@
     color: var(--ink-soft);
     margin: 2px 0 14px;
     text-align: center;
+    cursor: pointer;
+    transition: color 0.15s ease;
+  }
+  .datahead .rest:hover{color: var (--brass);
+  }
+  .datahead .jumphint{
+    display: block;
+    text-align: center;
+    font-size: 11px;
+    color: var(--brass-dim);
+    margin: -6px 0 14 px;
+    letter-spacing: 0.03em;
   }
   .datepick{
     font-family:'IBM Plex Mono', monospace;
@@ -216,6 +233,16 @@
     padding: 9px 0;
     border-bottom: 1px dashed var(--rule);
     color: var(--ink-soft);
+    cursor: pointer;
+    transition: background 0.15s ease, padding-left 0.15s ease;
+  }
+  .entry:hover{
+    background: rgba(156,122,60,0.08);
+    padding-left: 6px;
+  }
+  entry.selected{
+    background: rgba(156, 122, 60, 0.12);
+    padding-left: 6px;
   }
   .entry .d{ color: var(--ink); }
   .entry .h{ color: var(--brass); }
@@ -252,8 +279,9 @@
 
 <div class="card">
   <div class="datehead">
-    <p class="weekday" id="weekday">—</p>
-    <p class="rest" id="restdate">—</p>
+    <p class="weekday" id="weekday" title="Click to jump today">—</p>
+    <p class="rest" id="restdate" title="Click to jump today">—</p>
+    <span class="jumphint"> tap to the date to jump to today</span>
     <input type="date" id="datepick" class="datepick">
   </div>
 
@@ -422,6 +450,27 @@ async function loadEntryForDate(dateStr){
   }
   updateTotal();
 }
+async function switchToDate(dateStr){
+  $('datepick').value = dateStr;
+  const monthStr = dateStr.slice(0,7);
+  if(window._monthCache !== monthStr){
+    await renderMonth(monthStr);
+  }
+  await loadEntryForDate(dateStr);
+}
+
+function highlightSelectedEntry(dateStr){
+  const rows = document.querySelectorAll('.entry');
+  rows.forEach(r => r.classList.toggle('selected', r.dataset.date === dateStr));
+}
+
+async function jumpToToday(){
+  const todayStr = toDateStr(new Date());
+  await switchToDate(todayStr);
+}
+
+$('weekday').addEventListener('click', jumpToToday);
+$('restdate').addEventListener('click', jumpToToday);
 
 $('saveBtn').addEventListener('click', async () => {
   const dateStr = $('datepick').value;
