@@ -40,10 +40,10 @@
     max-width: 480px;
   }
 
-  .datehead{
+  .datahead{
     margin-bottom: 28px;
   }
-  .datehead .weekday{
+  .datahead .weekday{
     font-family:'Spectral', serif;
     font-size: 100px;
     font-weight:600;
@@ -58,7 +58,7 @@
   .datahead .weekday:hover{
     color: var(--brass);
   }
-  .datehead .rest{
+  .datahead .rest{
     font-family:'Spectral', serif;
     font-size: 20px;
     color: var(--ink-soft);
@@ -240,7 +240,7 @@
     background: rgba(156,122,60,0.08);
     padding-left: 6px;
   }
-  entry.selected{
+  .entry.selected{
     background: rgba(156, 122, 60, 0.12);
     padding-left: 6px;
   }
@@ -449,6 +449,7 @@ async function loadEntryForDate(dateStr){
     $('breakMinutes').value = 0;
   }
   updateTotal();
+  highlightSelectedEntry(dataStr);
 }
 async function switchToDate(dateStr){
   $('datepick').value = dateStr;
@@ -547,13 +548,17 @@ async function renderMonth(monthStr){
   if(monthEntries.length === 0){
     entriesEl.innerHTML = '<div class="empty">No entries saved for this month yet.</div>';
   } else {
-    for(const e of monthEntries){
-      const d = new Date(e.date + 'T00:00:00');
+    const currentDateStr = $('datepick').value;
+    for(const entry of monthEntries){
+      const d = new Date(entry.date + 'T00:00:00');
       const monthShort = d.toLocaleDateString('en-US', {month: 'short'});
       const label = `${d.getDate()}. ${monthShort}`;
       const row = document.createElement('div');
       row.className = 'entry';
-      row.innerHTML = `<span class="d">${label} · ${e.start}–${e.end}</span><span class="h">${fmtHours(e.totalMinutes)}</span>`;
+      row.dataset.date = entry.date;
+      if(entry.date === currentDateStr) row.classList.add('selected');
+      row.innerHTML = `<span class="d">${label} · ${entry.start}–${entry.end}</span><span class="h">${fmtHours(entry.totalMinutes)}</span>`;
+      row.addEventListener('click', () => switchToDate(entry.date));
       entriesEl.appendChild(row);
     }
   }
