@@ -40,10 +40,10 @@
     max-width: 480px;
   }
 
-  .datahead{
+  .datehead{
     margin-bottom: 28px;
   }
-  .datahead .weekday{
+  .datehead .weekday{
     font-family:'Spectral', serif;
     font-size: 100px;
     font-weight:600;
@@ -55,10 +55,10 @@
     cursor: pointer;
     transition: color 0.15s ease;
   }
-  .datahead .weekday:hover{
+  .datehead .weekday:hover{
     color: var(--brass);
   }
-  .datahead .rest{
+  .datehead .rest{
     font-family:'Spectral', serif;
     font-size: 20px;
     color: var(--ink-soft);
@@ -67,14 +67,15 @@
     cursor: pointer;
     transition: color 0.15s ease;
   }
-  .datahead .rest:hover{color: var (--brass);
+  .datehead .rest:hover{
+    color: var(--brass);
   }
-  .datahead .jumphint{
+  .datehead .jumphint{
     display: block;
     text-align: center;
     font-size: 11px;
     color: var(--brass-dim);
-    margin: -6px 0 14 px;
+    margin: -6px 0 14px;
     letter-spacing: 0.03em;
   }
   .datepick{
@@ -449,7 +450,7 @@ async function loadEntryForDate(dateStr){
     $('breakMinutes').value = 0;
   }
   updateTotal();
-  highlightSelectedEntry(dataStr);
+  highlightSelectedEntry(dateStr);
 }
 async function switchToDate(dateStr){
   $('datepick').value = dateStr;
