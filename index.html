@@ -45,17 +45,38 @@
   }
   .datehead .weekday{
     font-family:'Spectral', serif;
-    font-size: 36px;
+    font-size: 100px;
     font-weight:600;
-    line-height:1.05;
+    line-height:1.0;
     color: var(--ink);
     margin:0;
+    text-align: center;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: color 0.15s ease;
+  }
+  .datehead .weekday:hover{
+    color: var(--brass);
   }
   .datehead .rest{
     font-family:'Spectral', serif;
-    font-size: 18px;
+    font-size: 20px;
     color: var(--ink-soft);
     margin: 2px 0 14px;
+    text-align: center;
+    cursor: pointer;
+    transition: color 0.15s ease;
+  }
+  .datehead .rest:hover{
+    color: var(--brass);
+  }
+  .datehead .jumphint{
+    display: block;
+    text-align: center;
+    font-size: 11px;
+    color: var(--brass-dim);
+    margin: -6px 0 14px;
+    letter-spacing: 0.03em;
   }
   .datepick{
     font-family:'IBM Plex Mono', monospace;
@@ -213,6 +234,16 @@
     padding: 9px 0;
     border-bottom: 1px dashed var(--rule);
     color: var(--ink-soft);
+    cursor: pointer;
+    transition: background 0.15s ease, padding-left 0.15s ease;
+  }
+  .entry:hover{
+    background: rgba(156,122,60,0.08);
+    padding-left: 6px;
+  }
+  .entry.selected{
+    background: rgba(156, 122, 60, 0.12);
+    padding-left: 6px;
   }
   .entry .d{ color: var(--ink); }
   .entry .h{ color: var(--brass); }
@@ -249,8 +280,9 @@
 
 <div class="card">
   <div class="datehead">
-    <p class="weekday" id="weekday">—</p>
-    <p class="rest" id="restdate">—</p>
+    <p class="weekday" id="weekday" title="Click to jump today">—</p>
+    <p class="rest" id="restdate" title="Click to jump today">—</p>
+    <span class="jumphint"> tap to the date to jump to today</span>
     <input type="date" id="datepick" class="datepick">
   </div>
 
@@ -341,7 +373,8 @@ function fmtHeadline(dateStr){
   const [y,m,d] = dateStr.split('-').map(Number);
   const dt = new Date(y, m-1, d);
   const weekday = dt.toLocaleDateString('en-US', { weekday: 'long' });
-  const rest = dt.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+  const month = dt.toLocaleDateString('en-US', {month: 'long'});
+  const rest = `${d}. ${month} ${y}`;
   $('weekday').textContent = weekday;
   $('restdate').textContent = rest;
 }
@@ -417,7 +450,29 @@ async function loadEntryForDate(dateStr){
     $('breakMinutes').value = 0;
   }
   updateTotal();
+  highlightSelectedEntry(dateStr);
 }
+async function switchToDate(dateStr){
+  $('datepick').value = dateStr;
+  const monthStr = dateStr.slice(0,7);
+  if(window._monthCache !== monthStr){
+    await renderMonth(monthStr);
+  }
+  await loadEntryForDate(dateStr);
+}
+
+function highlightSelectedEntry(dateStr){
+  const rows = document.querySelectorAll('.entry');
+  rows.forEach(r => r.classList.toggle('selected', r.dataset.date === dateStr));
+}
+
+async function jumpToToday(){
+  const todayStr = toDateStr(new Date());
+  await switchToDate(todayStr);
+}
+
+$('weekday').addEventListener('click', jumpToToday);
+$('restdate').addEventListener('click', jumpToToday);
 
 $('saveBtn').addEventListener('click', async () => {
   const dateStr = $('datepick').value;
@@ -494,18 +549,28 @@ async function renderMonth(monthStr){
   if(monthEntries.length === 0){
     entriesEl.innerHTML = '<div class="empty">No entries saved for this month yet.</div>';
   } else {
-    for(const e of monthEntries){
-      const d = new Date(e.date + 'T00:00:00');
-      const label = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const currentDateStr = $('datepick').value;
+    for(const entry of monthEntries){
+      const d = new Date(entry.date + 'T00:00:00');
+      const monthShort = d.toLocaleDateString('en-US', {month: 'short'});
+      const label = `${d.getDate()}. ${monthShort}`;
       const row = document.createElement('div');
       row.className = 'entry';
-      row.innerHTML = `<span class="d">${label} · ${e.start}–${e.end}</span><span class="h">${fmtHours(e.totalMinutes)}</span>`;
+      row.dataset.date = entry.date;
+      if(entry.date === currentDateStr) row.classList.add('selected');
+      row.innerHTML = `<span class="d">${label} · ${entry.start}–${entry.end}</span><span class="h">${fmtHours(entry.totalMinutes)}</span>`;
+      row.addEventListener('click', () => switchToDate(entry.date));
       entriesEl.appendChild(row);
     }
   }
 
   window._monthEntriesCache = monthEntries;
   window._monthCache = monthStr;
+}
+
+function toEUDate(dateStr) {
+  const [y,m,d] = dateStr.split('-');
+  return `${d}.${m}.${y}`;
 }
 
 function toCSV(entries){
@@ -515,7 +580,7 @@ function toCSV(entries){
     const h = Math.floor(e.totalMinutes/60);
     const m = e.totalMinutes % 60;
     lines.push([
-      e.date, e.start, e.end,
+      toEUDate(e.date), e.start, e.end,
       e.breakTaken ? 'Yes' : 'No',
       e.breakMinutes,
       `${h}:${pad(m)}`,
